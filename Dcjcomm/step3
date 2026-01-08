@@ -1,0 +1,55 @@
+####################################################
+############### Visualization output ###############
+####################################################
+
+########## Heatmap plot of number ##########
+
+#Unify the name of cell types
+#colna<-colnames(expr_l_r)
+#colna<-gsub('BasalCells','Basal cells',colna)
+#colna<-gsub('BCells','B cells',colna)
+#colna<-gsub('TCells','T cells',colna)
+#colna<-gsub('EndothelialCells','Endothelial cells',colna)
+#colna<-gsub('LuminalEpithelialCells','Luminal cells',colna)
+#colnames(expr_l_r)<-colna
+library(stringr)
+library(dplyr)
+library(ggplot2)
+source('visualization.R')
+rows <- rep(rownames(expr_l_r), each = ncol(expr_l_r))
+cols <- rep(colnames(expr_l_r), time = nrow(expr_l_r))
+value <- c(t(expr_l_r))
+result <- data.frame(rows, cols, value)
+
+newdata<-subset(result, result$value > 0.5)
+cluster_L<-str_split(newdata$cols, "-", simplify = T)[,1]
+cluster_R<-str_split(newdata$cols, "-", simplify = T)[,2]
+data <- data.frame(cluster_R,cluster_L)
+
+d<-scSeqComm_heatmap_cardinality(data = data, title = "Number of ligand-receptor of cell communications")
+d
+
+########### Sankey plot of Ligand-receptor-tf interaction ##########
+colnames(expr_l_r)
+expr_l_r_sub = dplyr::select(expr_l_r, c("Differentiation inhibiting Preadipo(AF)-Lipid synthesizing hep"))
+rows <- rep(rownames(expr_l_r_sub), each = ncol(expr_l_r_sub))
+cols <- rep(colnames(expr_l_r_sub), time = nrow(expr_l_r_sub))
+value <- c(t(expr_l_r_sub))
+result <- data.frame(rows, cols, value)
+
+
+result<-result[which(result[,3]>0.5),]
+
+library(stringr)
+ligand<-str_split(result$rows, "-", simplify = T)[,1]
+receptor<-str_split(result$rows, "-", simplify = T)[,2]
+result<-cbind(ligand,receptor,result$value)
+result<-as.data.frame(result)
+
+library(dplyr)
+comm<- left_join(result,TF_PPRhuman, by="receptor")
+
+comm<- na.omit(comm)
+tmp<-comm[,c("ligand","receptor","tf","tf_PPR")]
+colnames(tmp)<-c("Ligand","Receptor","tf","value")
+tmp<-unique(tmp)
